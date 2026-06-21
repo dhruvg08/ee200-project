@@ -221,7 +221,7 @@ with tab2:
 
                         df = pd.DataFrame(results)
                         st.success("Batch processing complete!")
-                        st.dataframe(df, use_container_width=True)
+                        st.dataframe(df, width=stretch)
 
                         csv_data = df.to_csv(index=False)
                         st.download_button(
