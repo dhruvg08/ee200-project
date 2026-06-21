@@ -162,7 +162,7 @@ try:
 except Exception as e:
     st.warning(f"Visualization error (match result above is still valid): {e}")
                
-                finally:
+             
                     # Clean up temp file
                     if os.path.exists(tmp_path):
                         os.remove(tmp_path)
