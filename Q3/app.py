@@ -61,7 +61,7 @@ st.markdown("""
 # Load database
 @st.cache_resource
 def get_db():
-    db_path = "data/songs_db.pkl"
+    db_path = "songs_db.pkl"
     if os.path.exists(db_path):
         return SongDatabase.load(db_path)
     return None
@@ -75,7 +75,7 @@ with st.sidebar:
     if db:
         st.success(f"Database loaded: {len(db.songs_list)} songs indexed.")
     else:
-        st.error("No database loaded! Please make sure data/songs_db.pkl exists.")
+        st.error("No database loaded! Please make sure songs_db.pkl exists.")
         
     st.markdown("---")
     st.markdown("### Parameters")
