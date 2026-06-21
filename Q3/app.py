@@ -61,7 +61,7 @@ st.markdown("""
 # Load database
 @st.cache_resource
 def get_db():
-    db_path = "songs_db.pkl"
+    db_path = os.path.join(os.path.dirname(__file__), "songs_db.pkl")
     if os.path.exists(db_path):
         return SongDatabase.load(db_path)
     return None
