@@ -102,7 +102,7 @@ with tab1:
                     tmp_file.write(uploaded_file.read())
                     tmp_path = tmp_file.name
                 
-                try:
+            
                     # Load and match
                     audio, _ = load_audio(tmp_path)
                     prediction, votes, offsets, q_peaks = db.match_clip(audio)
