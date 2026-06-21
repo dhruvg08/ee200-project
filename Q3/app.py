@@ -121,48 +121,47 @@ with tab1:
                     with col2:
                         st.markdown("### Visualizations")
                         
-                    # Generate figures
-                    f, t, Sxx = compute_spectrogram(audio)
-                    Sxx_db = 10 * np.log10(Sxx + 1e-10)
-                    
-                    # Figure 1: Spectrogram & Constellation
-                    fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-                    plt.style.use('dark_background')
-                    
-                    # Spectrogram plot
-                    img1 = ax1.pcolormesh(t, f, Sxx_db, shading='gouraud', cmap='viridis')
-                    ax1.set_title("Query Spectrogram")
-                    ax1.set_ylabel("Frequency (Hz)")
-                    ax1.set_xlabel("Time (s)")
-                    fig1.colorbar(img1, ax=ax1, label="Magnitude (dB)")
-                    
-                    # Constellation plot
-                    ax2.pcolormesh(t, f, Sxx_db, shading='gouraud', cmap='viridis', alpha=0.2)
-                    peak_times = [t[p[0]] for p in q_peaks]
-                    peak_freqs = [f[p[1]] for p in q_peaks]
-                    ax2.scatter(peak_times, peak_freqs, color='#38bdf8', s=12, label="Peaks")
-                    ax2.set_title(f"Constellation Map ({len(q_peaks)} peaks)")
-                    ax2.set_ylabel("Frequency (Hz)")
-                    ax2.set_xlabel("Time (s)")
-                    ax2.legend()
-                    
-                    st.pyplot(fig1)
-                    plt.close(fig1)
-                    
-                    # Figure 2: Offset Histogram
-                    if prediction and len(offsets) > 0:
-                        fig2, ax = plt.subplots(figsize=(10, 4))
-                        min_off, max_off = offsets.min(), offsets.max()
-                        bins = np.arange(min_off - 1, max_off + 2, 1)
-                        ax.hist(offsets, bins=bins, color='#a855f7', edgecolor='black', alpha=0.8)
-                        ax.set_title(f"Offset Histogram for Match: {prediction}")
-                        ax.set_xlabel("Time Offset (bins)")
-                        ax.set_ylabel("Count")
-                        st.pyplot(fig2)
-                        plt.close(fig2)
-                        
-                except Exception as e:
-                    st.error(f"Error processing audio file: {e}")
+                  # Generate figures
+try:
+    f_arr, t_arr, Sxx = compute_spectrogram(audio)
+    Sxx_db = 10 * np.log10(Sxx + 1e-10)
+    
+    plt.style.use('dark_background')
+    fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    img1 = ax1.pcolormesh(t_arr, f_arr, Sxx_db, shading='gouraud', cmap='viridis')
+    ax1.set_title("Query Spectrogram")
+    ax1.set_ylabel("Frequency (Hz)")
+    ax1.set_xlabel("Time (s)")
+    fig1.colorbar(img1, ax=ax1, label="Magnitude (dB)")
+    
+    ax2.pcolormesh(t_arr, f_arr, Sxx_db, shading='gouraud', cmap='viridis', alpha=0.2)
+    if q_peaks:
+        peak_times = [t_arr[min(p[0], len(t_arr)-1)] for p in q_peaks]
+        peak_freqs = [f_arr[min(p[1], len(f_arr)-1)] for p in q_peaks]
+        ax2.scatter(peak_times, peak_freqs, color='#38bdf8', s=12, label="Peaks")
+    ax2.set_title(f"Constellation Map ({len(q_peaks)} peaks)")
+    ax2.set_ylabel("Frequency (Hz)")
+    ax2.set_xlabel("Time (s)")
+    ax2.legend()
+    
+    st.pyplot(fig1)
+    plt.close(fig1)
+    
+    if prediction and offsets is not None and len(offsets) > 0:
+        fig2, ax = plt.subplots(figsize=(10, 4))
+        min_off, max_off = offsets.min(), offsets.max()
+        bins = np.arange(min_off - 1, max_off + 2, 1)
+        ax.hist(offsets, bins=bins, color='#a855f7', edgecolor='black', alpha=0.8)
+        ax.set_title(f"Offset Histogram for Match: {prediction}")
+        ax.set_xlabel("Time Offset (bins)")
+        ax.set_ylabel("Count")
+        st.pyplot(fig2)
+        plt.close(fig2)
+
+except Exception as e:
+    st.warning(f"Visualization error (match result above is still valid): {e}")
+               
                 finally:
                     # Clean up temp file
                     if os.path.exists(tmp_path):
