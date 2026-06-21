@@ -3,3 +3,5 @@ scipy
 matplotlib
 pandas
 streamlit
+librosa
+soundfile
