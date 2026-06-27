@@ -1,23 +1,3 @@
-#!/usr/bin/env python3
-"""
-build_db.py — Index a folder of songs into songs_db.pkl
-
-Run this ONCE locally (or in Streamlit Cloud's startup) before launching
-the app.  The resulting songs_db.pkl should be committed / shipped alongside
-the app so the deployed version works immediately.
-
-Usage examples
---------------
-    python build_db.py                          # scans ./songs/, writes ./songs_db.pkl
-    python build_db.py --songs_dir data/songs   # custom input folder
-    python build_db.py --output my_db.pkl       # custom output file
-
-Important
----------
-The song's filename WITHOUT its extension is the label that the identifier
-will output.  Do NOT rename the files provided by the course.
-"""
-
 import os
 import sys
 import time
@@ -33,7 +13,6 @@ def build(songs_dir: str, output: str) -> None:
         print(f"[ERROR] Directory not found: '{songs_dir}'")
         sys.exit(1)
 
-    # Collect audio files (hidden files like .DS_Store are skipped)
     files = sorted(
         f for f in os.listdir(songs_dir)
         if f.lower().endswith(SUPPORTED_EXTENSIONS) and not f.startswith(".")
@@ -51,7 +30,7 @@ def build(songs_dir: str, output: str) -> None:
     t0 = time.time()
 
     for i, filename in enumerate(files, 1):
-        song_name = os.path.splitext(filename)[0]   # label = name without ext
+        song_name = os.path.splitext(filename)[0] 
         filepath  = os.path.join(songs_dir, filename)
         t_song    = time.time()
         try:
