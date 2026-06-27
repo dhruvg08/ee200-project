@@ -1,36 +1,3 @@
-"""
-app.py — Zapptain America: Music Identifier  v2
-EE200: Signals, Systems & Networks — Q3B
-
-New features added in v2
-------------------------
-Tab 3 — 🎙️ Live Recording
-    Records from the microphone via st.audio_input (Streamlit >= 1.31).
-    Shows waveform, spectrogram, constellation, offset histogram,
-    and identifies the song.
-
-Tab 4 — 🔬 Robustness Testing  (required for Q3A analysis)
-    Additive White Gaussian Noise: slider 0–40 dB SNR + Full Sweep
-    button that runs 7 SNR levels and plots votes vs SNR.
-    Pitch Shift: slider +-6 semitones (librosa phase vocoder) + Full
-    Sweep button across every integer semitone from -6 to +6.
-    Both sweeps colour bars blue=correct, red=wrong/no-match and play
-    back the degraded audio so you can hear the distortion.
-
-Sidebar: collapsible indexed-song list.
-
-Refactored into helper functions so all four tabs share the same
-visualisation code (DRY).
-
-Bug fixes carried over from v1
---------------------------------
-1. Sidebar st.info() line-breaks fixed (two trailing spaces before newline).
-2. Song-name shown with styled HTML instead of st.metric() number widget.
-3. Offset histogram bins capped at 200.
-4. ax2.legend() guarded by `if q_peaks`.
-5. pcolormesh shading='auto' instead of 'gouraud'.
-6. Batch ZIP: __MACOSX entries filtered.
-"""
 
 import os
 import gc
@@ -52,7 +19,6 @@ from fingerprint import (
     get_constellation, TARGET_SR,
 )
 
-# ── Page configuration ────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="Zapptain America — Music Identifier",
@@ -61,7 +27,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
@@ -94,8 +59,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# ── Shared helper functions ───────────────────────────────────────────────────
 
 def _add_noise(audio: np.ndarray, snr_db: float) -> np.ndarray:
     """Add AWGN at the given SNR (dB). Lower value = more noise."""
@@ -231,8 +194,6 @@ def _sweep_bar_chart(x_vals, votes, preds, baseline, xlabel, title):
     gc.collect()
 
 
-# ── Database loader ───────────────────────────────────────────────────────────
-
 @st.cache_resource
 def get_db():
     try:
@@ -247,7 +208,6 @@ def get_db():
 
 db = get_db()
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("<h2 style='color:#38bdf8;'>🎵 Sonic Fingerprinting</h2>",
@@ -276,7 +236,6 @@ with st.sidebar:
         "**Max peaks:** 200 / clip"
     )
 
-# ── Header ────────────────────────────────────────────────────────────────────
 
 st.markdown("<div class='header-title'>Zapptain America 🇺🇸</div>",
             unsafe_allow_html=True)
@@ -289,10 +248,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🔬 Robustness Testing",
 ])
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tab 1 : Single-clip search
-# ═══════════════════════════════════════════════════════════════════════════════
 
 with tab1:
     st.header("Search a Single Audio Clip")
@@ -336,10 +291,6 @@ with tab1:
                     os.remove(tmp_path)
                 gc.collect()
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tab 2 : Batch processing
-# ═══════════════════════════════════════════════════════════════════════════════
 
 with tab2:
     st.header("Batch Process Queries")
@@ -408,10 +359,6 @@ with tab2:
                         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tab 3 : Live Recording  (NEW)
-# ═══════════════════════════════════════════════════════════════════════════════
-
 with tab3:
     st.header("🎙️ Record & Identify")
     st.write(
@@ -423,7 +370,6 @@ with tab3:
     if not db:
         st.error("Cannot identify: database is not loaded.")
     else:
-        # st.audio_input requires Streamlit >= 1.31 (Jan 2024)
         audio_value = st.audio_input(
             "🎤  Click the microphone icon to start / stop recording",
             key="mic_recorder",
@@ -445,7 +391,6 @@ with tab3:
                     rec_audio, _ = load_audio(tmp_path)
                     prediction, votes, offsets, q_peaks = db.match_clip(rec_audio)
 
-                # Waveform
                 st.markdown("#### Recorded Waveform")
                 t_wave = np.linspace(0, len(rec_audio) / TARGET_SR, len(rec_audio))
                 fig_w, ax_w = plt.subplots(figsize=(10, 2))
@@ -494,10 +439,6 @@ with tab3:
                 gc.collect()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tab 4 : Robustness Testing  (NEW)
-# ═══════════════════════════════════════════════════════════════════════════════
-
 with tab4:
     st.header("🔬 Robustness Testing")
     st.write(
@@ -541,7 +482,6 @@ with tab4:
                 st.markdown("<div class='section-divider'></div>",
                             unsafe_allow_html=True)
 
-                # ── SECTION A: Noise ──────────────────────────────────────────
                 st.subheader("A. Additive White Gaussian Noise (AWGN)")
                 st.write(
                     "Lower SNR = more noise. Noise uniformly raises the spectrogram "
@@ -601,7 +541,6 @@ with tab4:
                 st.markdown("<div class='section-divider'></div>",
                             unsafe_allow_html=True)
 
-                # ── SECTION B: Pitch shift ────────────────────────────────────
                 st.subheader("B. Pitch Shift Robustness")
                 st.write(
                     "**Why does a small pitch shift break the identifier?** "
