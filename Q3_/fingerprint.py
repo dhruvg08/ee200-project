@@ -1,27 +1,3 @@
-"""
-fingerprint.py — Shazam-style audio fingerprinting
-EE200: Signals, Systems & Networks — Q3A / Q3B
-
-Algorithm overview
-------------------
-1. Load audio → mono, resample to TARGET_SR
-2. STFT → power spectrogram (freq × time)
-3. Local-max filter → constellation of strongest peaks
-4. Pair each peak with the next FAN_OUT peaks (within a time-bin window)
-   → compact hash key (f1, f2, Δt)
-5. Database: hash_key → [(song_id, anchor_time_bin), ...]
-6. Query: count (song_id, offset) votes; peak-offset count = confidence
-
-Design notes
-------------
-* Tuple keys (f1, f2, dt) are used instead of hash() integers so the
-  database survives pickle/unpickle across Python processes without any
-  PYTHONHASHSEED issue.
-* TARGET_SR = 8 000 Hz (Shazam's original rate) is sufficient to capture
-  the harmonic structure of music up to 4 kHz and keeps memory/CPU low
-  enough to run on Streamlit Community Cloud's free tier.
-"""
-
 import numpy as np
 import librosa
 import pickle
@@ -29,20 +5,17 @@ import scipy.signal as signal
 from scipy.ndimage import maximum_filter
 from collections import defaultdict
 
-# ── Hyperparameters ──────────────────────────────────────────────────────────
 
-TARGET_SR    = 8_000   # Hz
-N_FFT        = 512     # STFT window (samples)   – shown in sidebar
-HOP_LENGTH   = 128     # 512 − 384 overlap        – shown in sidebar
-NEIGHBORHOOD = 20      # local-max filter size (freq_bins × time_bins)
-AMP_MIN_DB   = -60.0   # absolute dB floor — peaks below this are discarded
-NUM_PEAKS    = 200     # keep the strongest N peaks per fingerprint
-FAN_OUT      = 15      # how many future peaks to pair with each anchor
-MIN_DT       = 1       # minimum time-bin gap for a hash pair
-MAX_DT       = 200     # maximum time-bin gap for a hash pair
+TARGET_SR    = 8_000   
+N_FFT        = 512     
+HOP_LENGTH   = 128     
+NEIGHBORHOOD = 20      
+AMP_MIN_DB   = -60.0  
+NUM_PEAKS    = 200  
+FAN_OUT      = 15 
+MIN_DT       = 1 
+MAX_DT       = 200 
 
-
-# ── Audio I/O ────────────────────────────────────────────────────────────────
 
 def load_audio(path: str, sr: int = TARGET_SR):
     """Load an audio file, convert to mono, resample to *sr*.
@@ -104,7 +77,6 @@ def get_constellation(
     """
     Sxx_db = 10.0 * np.log10(Sxx + 1e-10)   # power → dB
 
-    # --- local-maximum filter ------------------------------------------------
     local_max = maximum_filter(
         Sxx_db,
         size=NEIGHBORHOOD,
@@ -126,7 +98,6 @@ def get_constellation(
         f_idx = f_idx[keep]
         t_idx = t_idx[keep]
 
-    # Sort by time; return as (t_bin, f_bin) tuples
     order = np.argsort(t_idx)
     peaks = list(zip(t_idx[order].tolist(), f_idx[order].tolist()))
     return peaks
@@ -215,55 +186,11 @@ class SongDatabase:
         min_votes: int = 8,
         min_margin_ratio: float = 1.3,
     ):
-        """Identify a query audio clip against the indexed database.
-
-        For each matching hash, compute the time offset between the database
-        entry and the query.  A true match produces many hashes at the same
-        offset; a wrong song produces only scattered, random offsets.
-
-        Two confidence gates are applied before a prediction is returned —
-        this matters most for noisy input (e.g. live microphone recordings),
-        where a "best" song can otherwise still be reported with only a
-        handful of incidental votes that are statistically indistinguishable
-        from noise:
-
-        * ``min_votes`` — the winning song's top offset must collect at
-          least this many aligned hashes. Below this, the match is treated
-          as noise and ``None`` is returned instead of a low-confidence
-          guess.
-        * ``min_margin_ratio`` — the winner's vote count must exceed the
-          runner-up's by at least this ratio (e.g. 1.3 = at least 30% more
-          votes than the second-best song). A narrow margin between the
-          top two candidates means the result is ambiguous, even if the
-          raw vote count looks high enough on its own.
-
-        Parameters
-        ----------
-        audio            : np.ndarray   mono float32 query signal
-        sr               : int          sample rate of *audio*
-        min_votes        : int          minimum votes required for the
-                                         winning song (default 8)
-        min_margin_ratio : float        winner must beat runner-up by this
-                                         multiplicative margin (default 1.3)
-
-        Returns
-        -------
-        prediction : str or None
-            Name of the best-matching song, or None if nothing matched
-            confidently enough.
-        votes : int
-            Number of time-aligned hash pairs for the best match
-            (higher = more confident). 0 if no confident match.
-        offsets : np.ndarray or None
-            All offset values for the best song — used for the histogram.
-        q_peaks : list
-            Constellation peaks of the query — used for visualisation.
-        """
+        
         f, t, Sxx = compute_spectrogram(audio, sr)
         q_peaks   = get_constellation(f, t, Sxx)
         hashes    = generate_hashes(q_peaks)
 
-        # votes[song_id][offset] = count of aligned hash pairs
         votes: dict = defaultdict(lambda: defaultdict(int))
 
         for key, q_t in hashes:
@@ -274,7 +201,6 @@ class SongDatabase:
         if not votes:
             return None, 0, None, q_peaks
 
-        # Rank every song by its single best-aligned offset
         peak_counts = {sid: max(off_counts.values())
                        for sid, off_counts in votes.items()}
         ranked = sorted(peak_counts.items(), key=lambda kv: kv[1], reverse=True)
@@ -282,12 +208,10 @@ class SongDatabase:
         best_id, best_votes = ranked[0]
         runner_up_votes = ranked[1][1] if len(ranked) > 1 else 0
 
-        # ── Confidence gates ───────────────────────────────────────────────
         if best_votes < min_votes:
             return None, best_votes, None, q_peaks
 
         if runner_up_votes > 0 and best_votes < runner_up_votes * min_margin_ratio:
-            # Top two candidates too close to call — ambiguous, not a match
             return None, best_votes, None, q_peaks
 
         # Collect all (offset × count) for the winning song for the histogram
